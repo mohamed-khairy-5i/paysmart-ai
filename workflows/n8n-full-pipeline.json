@@ -1,0 +1,442 @@
+{
+  "name": "🔥 النظام المتكامل لأتمتة الطلبات وفحص الإيصالات بالذكاء الاصطناعي (AI Order & Payment Pipeline)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "order-checkout",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook-order",
+      "name": "1. استلام الطلب من صفحة الويب (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [180, 260]
+    },
+    {
+      "parameters": {
+        "jsCode": "// إنشاء رقم طلب فريد وحساب الإجمالي وتوليد رابط تليجرام المشفر\nconst body = $input.first().json.body || $input.first().json;\n\nconst orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);\nconst botUsername = 'YourStoreBot'; // استبدله بيوزر بوتك الحقيقي\nconst telegramDeepLink = `https://t.me/${botUsername}?start=${orderId}`;\n\nreturn {\n  orderId,\n  customerName: body.customerName || 'عميل',\n  phone: body.phone || '',\n  address: body.address || '',\n  items: body.items || [],\n  totalAmount: Number(body.totalAmount || 0),\n  status: 'PENDING_PAYMENT',\n  telegramDeepLink,\n  createdAt: new Date().toISOString()\n};"
+      },
+      "id": "node-prepare-order",
+      "name": "2. معالجة وتوليد رقم الطلب والرابط المشفر",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 260]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Orders",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Order_ID": "={{ $json.orderId }}",
+            "Customer_Name": "={{ $json.customerName }}",
+            "Phone": "={{ $json.phone }}",
+            "Address": "={{ $json.address }}",
+            "Total_Amount": "={{ $json.totalAmount }}",
+            "Status": "PENDING_PAYMENT",
+            "Created_At": "={{ $json.createdAt }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "node-sheets-append",
+      "name": "3. تسجيل الطلب في Google Sheets (Orders)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [660, 260]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "responseBody": "={\n  \"success\": true,\n  \"orderId\": \"{{ $('2. معالجة وتوليد رقم الطلب والرابط المشفر').first().json.orderId }}\",\n  \"totalAmount\": {{ $('2. معالجة وتوليد رقم الطلب والرابط المشفر').first().json.totalAmount }},\n  \"telegramDeepLink\": \"{{ $('2. معالجة وتوليد رقم الطلب والرابط المشفر').first().json.telegramDeepLink }}\"\n}"
+      },
+      "id": "node-respond-checkout",
+      "name": "4. إرجاع الرد لصفحة الشكر ورابط تليجرام",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 260]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "node-telegram-trigger",
+      "name": "5. تليجرام Trigger (استقبال رسائل وصور العملاء)",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [180, 560]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text ? $json.message.text.startsWith('/start') : false }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.photo ? true : false }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-switch-msg-type",
+      "name": "6. تصنيف الرسالة: أمر Start أم صورة إيصال؟",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [440, 560]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.message.chat.id }}",
+        "text": "=مرحباً بك في متجرنا الذكي! 🌟\n\nتم ربط محادثتك بنجاح.\n💳 يرجى إجراء التحويل عبر إحدى الطرق التالية:\n1. InstaPay: store@instapay\n2. فودافون كاش: 01012345678\n\n📸 ثم أرسل سكرين شوت (صورة الإيصال) هنا مباشرة ليقوم الذكاء الاصطناعي بمطابقتها واعتماد طلبك فوراً!",
+        "additionalFields": {}
+      },
+      "id": "node-reply-start",
+      "name": "7. إرسال تعليمات الدفع وتفاصيل الحسابات",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [720, 460]
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "operation": "get",
+        "fileId": "={{ $json.message.photo[$json.message.photo.length - 1].file_id }}"
+      },
+      "id": "node-download-photo",
+      "name": "8. تحميل صورة الإيصال بأعلى دقة",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [720, 680]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{ $env.GEMINI_API_KEY || 'YOUR_GEMINI_API_KEY' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "body": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Analyze this payment receipt screenshot. Return STRICT RAW JSON with: is_valid_receipt (bool), payment_method (string), transaction_id (string), amount_paid (number), recipient_account (string), is_today_or_recent (bool), tampering_signs (object with detected bool and details string).\"\n        },\n        {\n          \"inline_data\": {\n            \"mime_type\": \"image/jpeg\",\n            \"data\": \"{{ $binary.data.data }}\"\n          }\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"temperature\": 0.1,\n    \"response_mime_type\": \"application/json\"\n  }\n}",
+        "options": {}
+      },
+      "id": "node-gemini-vision-ocr",
+      "name": "9. Gemini Vision AI - فحص الإيصال والتلاعب",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [960, 680]
+    },
+    {
+      "parameters": {
+        "jsCode": "// استخراج تقرير الذكاء الاصطناعي وتطبيق مصفوفة القواعد وحالات الفشل\nconst geminiRaw = $input.first().json;\nconst candidateText = geminiRaw.candidates?.[0]?.content?.parts?.[0]?.text || '{}';\nconst cleanJson = candidateText.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n\nlet aiData = {};\ntry {\n  aiData = JSON.parse(cleanJson);\n} catch(e) {\n  aiData = { is_valid_receipt: false, reason: 'فشل قراءة النص' };\n}\n\n// جلب المبلغ المطلوب للطلب (مثال من السجل)\nconst requiredAmount = 85.0; // يتم ربطه برقم طلب العميل من الشيت\nconst paidAmount = Number(aiData.amount_paid || 0);\n\nlet decisionCode = 'FAILED';\nlet reason = '';\n\nif (!aiData.is_valid_receipt) {\n  decisionCode = 'INVALID_IMAGE';\n  reason = 'الصورة المرسلة ليست إيصال دفع صحيح.';\n} else if (aiData.tampering_signs && aiData.tampering_signs.detected) {\n  decisionCode = 'TAMPERED';\n  reason = 'تم رصد شبهة تعديل أو تلاعب في أرقام وخطوط الإيصال.';\n} else if (aiData.is_today_or_recent === false) {\n  decisionCode = 'EXPIRED';\n  reason = 'تاريخ التحويل في الإيصال قديم ولا يطابق وقت هذا الطلب.';\n} else if (paidAmount < requiredAmount) {\n  decisionCode = 'PARTIALLY_PAID';\n  reason = `تم استلام ${paidAmount} ج.م ومتبقي ${requiredAmount - paidAmount} ج.م لتأكيد الطلب.`;\n} else if (paidAmount > requiredAmount) {\n  decisionCode = 'OVERPAID_CONFIRMED';\n  reason = `تم السداد بزيادة ${paidAmount - requiredAmount} ج.م وسيتم رد الفارق نقداً.`;\n} else {\n  decisionCode = 'PAID_CONFIRMED';\n  reason = 'تم التحقق من صحة الإيصال والمبلغ وتطابق البيانات بنجاح 100%.';\n}\n\nreturn {\n  decisionCode,\n  reason,\n  aiData,\n  paidAmount,\n  requiredAmount,\n  chatId: $('5. تليجرام Trigger (استقبال رسائل وصور العملاء)').first().json.message.chat.id\n};"
+      },
+      "id": "node-rules-engine",
+      "name": "10. محرك القواعد وحالات الاستثناء (Rules Engine)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 680]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decisionCode }}",
+                    "rightValue": "PAID_CONFIRMED",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.decisionCode }}",
+                    "rightValue": "PARTIALLY_PAID",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "node-switch-decisions",
+      "name": "11. توجيه الإجراء بناءً على القرار الذكي",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [1440, 680]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID_HERE",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Cashier_Queue",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "PAID_CONFIRMED",
+            "Transaction_ID": "={{ $json.aiData.transaction_id }}",
+            "Paid_Amount": "={{ $json.paidAmount }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "node-update-cashier-sheet",
+      "name": "12. نقل الطلب لشيت الكاشير والمطبخ للتجهيز",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1720, 560]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "=🎉 تم تأكيد الدفع بنجاح واعتماد طلبك عبر الذكاء الاصطناعي!\n\n🔹 طريقة الدفع: {{ $json.aiData.payment_method }}\n🔹 المبلغ المسدد: {{ $json.paidAmount }} ج.م\n🔹 رقم العملية: {{ $json.aiData.transaction_id }}\n\n🚀 تم إرسال طلبك مباشرة للمطبخ لبدء تحضيره فوراً!",
+        "additionalFields": {}
+      },
+      "id": "node-telegram-success-msg",
+      "name": "13. إشعار العميل بالاعتماد الفوري",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1980, 560]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "=⚠️ تنبيه: تم استلام دفعة جزئية!\n\n{{ $json.reason }}\nيرجى تحويل المبلغ المتبقي وإرسال الإيصال الجديد لتأكيد الطلب.",
+        "additionalFields": {}
+      },
+      "id": "node-telegram-partial-msg",
+      "name": "14. إشعار العميل بسداد المبلغ المتبقي",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1720, 720]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $json.chatId }}",
+        "text": "=⚠️ تعذر اعتماد الإيصال:\n\n{{ $json.reason }}\nيرجى التأكد من تحويل المبلغ المطلوب وإرسال صورة واضحة للإيصال الصحيح.",
+        "additionalFields": {}
+      },
+      "id": "node-telegram-error-msg",
+      "name": "15. إشعار العميل بسبب رفض الإيصال",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1720, 880]
+    }
+  ],
+  "connections": {
+    "1. استلام الطلب من صفحة الويب (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "2. معالجة وتوليد رقم الطلب والرابط المشفر",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. معالجة وتوليد رقم الطلب والرابط المشفر": {
+      "main": [
+        [
+          {
+            "node": "3. تسجيل الطلب في Google Sheets (Orders)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. تسجيل الطلب في Google Sheets (Orders)": {
+      "main": [
+        [
+          {
+            "node": "4. إرجاع الرد لصفحة الشكر ورابط تليجرام",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. تليجرام Trigger (استقبال رسائل وصور العملاء)": {
+      "main": [
+        [
+          {
+            "node": "6. تصنيف الرسالة: أمر Start أم صورة إيصال؟",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. تصنيف الرسالة: أمر Start أم صورة إيصال؟": {
+      "main": [
+        [
+          {
+            "node": "7. إرسال تعليمات الدفع وتفاصيل الحسابات",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "8. تحميل صورة الإيصال بأعلى دقة",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8. تحميل صورة الإيصال بأعلى دقة": {
+      "main": [
+        [
+          {
+            "node": "9. Gemini Vision AI - فحص الإيصال والتلاعب",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "9. Gemini Vision AI - فحص الإيصال والتلاعب": {
+      "main": [
+        [
+          {
+            "node": "10. محرك القواعد وحالات الاستثناء (Rules Engine)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "10. محرك القواعد وحالات الاستثناء (Rules Engine)": {
+      "main": [
+        [
+          {
+            "node": "11. توجيه الإجراء بناءً على القرار الذكي",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "11. توجيه الإجراء بناءً على القرار الذكي": {
+      "main": [
+        [
+          {
+            "node": "12. نقل الطلب لشيت الكاشير والمطبخ للتجهيز",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "14. إشعار العميل بسداد المبلغ المتبقي",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12. نقل الطلب لشيت الكاشير والمطبخ للتجهيز": {
+      "main": [
+        [
+          {
+            "node": "13. إشعار العميل بالاعتماد الفوري",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

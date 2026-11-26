@@ -1,0 +1,20 @@
+[
+  {
+    "timestamp": "2026-11-15T22:44:16.741Z",
+    "orderId": "ORD-478529",
+    "reason": "رقم العملية (TXN-DUP-001) تم استخدامه مسبقاً في طلب آخر. لا يمكن إعادة استخدام الإيصالات.",
+    "payload": {
+      "is_valid_receipt": true,
+      "payment_method": "InstaPay",
+      "transaction_id": "TXN-DUP-001",
+      "amount_paid": 265,
+      "currency": "EGP",
+      "recipient_account": "store@instapay",
+      "is_today_or_recent": true,
+      "tampering_signs": {
+        "detected": false
+      },
+      "confidence_score": 0.98
+    }
+  }
+]

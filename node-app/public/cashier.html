@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>لوحة الكاشير والمطبخ | نظام استلام وتجهيز الطلبات</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Cairo', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen">
+
+  <!-- Top Navigation -->
+  <header class="bg-slate-900 text-white sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-sm">
+          <i data-lucide="chef-hat" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h1 class="text-base font-bold tracking-tight">شاشة الكاشير وإدارة الاستثناءات</h1>
+          <p class="text-[11px] text-slate-400">مراقبة واعتماد الطلبات وفحص الحالات المعقدة (Human-in-the-Loop)</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700 text-xs text-slate-300">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>تحديث حي كل 3 ثوانٍ</span>
+        </div>
+        <a href="/" class="inline-flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700 transition">
+          <i data-lucide="store" class="w-3.5 h-3.5"></i>
+          <span>واجهة المتجر</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6">
+
+    <!-- Metrics Bar -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs text-slate-500 font-semibold block mb-1">الطلبات المعتمدة (للتجهيز)</span>
+        <div class="flex items-center justify-between">
+          <span id="metric-paid" class="text-2xl font-extrabold text-emerald-600 font-mono">0</span>
+          <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <i data-lucide="flame" class="w-4 h-4"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs text-slate-500 font-semibold block mb-1">تحتاج مراجعة بشرية ⚠️</span>
+        <div class="flex items-center justify-between">
+          <span id="metric-review" class="text-2xl font-extrabold text-rose-600 font-mono">0</span>
+          <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+            <i data-lucide="alert-circle" class="w-4 h-4"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs text-slate-500 font-semibold block mb-1">بانتظار الدفع أو التكملة</span>
+        <div class="flex items-center justify-between">
+          <span id="metric-pending" class="text-2xl font-extrabold text-slate-400 font-mono">0</span>
+          <div class="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center">
+            <i data-lucide="hourglass" class="w-4 h-4"></i>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs text-slate-500 font-semibold block mb-1">إجمالي المبيعات المؤكدة</span>
+        <div class="flex items-center justify-between">
+          <span id="metric-revenue" class="text-2xl font-extrabold text-indigo-600 font-mono">0 ج.م</span>
+          <div class="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <i data-lucide="wallet" class="w-4 h-4"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="flex items-center gap-2 mb-4 overflow-x-auto pb-2">
+      <button onclick="setFilter('ALL')" id="tab-ALL" class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-900 text-white shadow-sm">
+        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+        <span>الكل</span>
+      </button>
+      <button onclick="setFilter('PAID_CONFIRMED')" id="tab-PAID_CONFIRMED" class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-emerald-600"></i>
+        <span>جاهز للتجهيز</span>
+      </button>
+      <button onclick="setFilter('ESCALATED_HUMAN')" id="tab-ESCALATED_HUMAN" class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition bg-white text-rose-600 border border-rose-200 hover:bg-rose-50">
+        <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-rose-600"></i>
+        <span>مراجعة بشرية (استثناءات)</span>
+      </button>
+      <button onclick="setFilter('PARTIALLY_PAID')" id="tab-PARTIALLY_PAID" class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition bg-white text-amber-600 border border-amber-200 hover:bg-amber-50">
+        <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-amber-600"></i>
+        <span>دفع جزئي</span>
+      </button>
+      <button onclick="setFilter('PREPARING')" id="tab-PREPARING" class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+        <i data-lucide="cooking-pot" class="w-3.5 h-3.5 text-amber-600"></i>
+        <span>قيد التحضير</span>
+      </button>
+      <button onclick="setFilter('DELIVERED')" id="tab-DELIVERED" class="tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">
+        <i data-lucide="check-circle" class="w-3.5 h-3.5 text-indigo-600"></i>
+        <span>مكتمل ومسلّم</span>
+      </button>
+    </div>
+
+    <!-- Orders Cards Grid -->
+    <div id="orders-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div class="col-span-full text-center py-12 text-slate-400 text-sm">
+        جاري تحميل الطلبات...
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    let currentFilter = 'ALL';
+    let allOrders = [];
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.className = 'tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition bg-white text-slate-600 border border-slate-200 hover:bg-slate-50';
+      });
+      const activeTab = document.getElementById(`tab-${filter}`);
+      if (activeTab) {
+        activeTab.className = 'tab-btn inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold transition bg-slate-900 text-white shadow-sm';
+      }
+      renderOrders();
+    }
+
+    async function fetchOrders() {
+      try {
+        const res = await fetch('/api/cashier/orders');
+        const data = await res.json();
+        if (data.success) {
+          allOrders = data.orders || [];
+          updateMetrics();
+          renderOrders();
+        }
+      } catch (e) {
+        console.error('Failed to load orders:', e);
+      }
+    }
+
+    function updateMetrics() {
+      const paid = allOrders.filter(o => o.status === 'PAID_CONFIRMED' || o.status === 'OVERPAID_CONFIRMED').length;
+      const review = allOrders.filter(o => o.status === 'ESCALATED_HUMAN').length;
+      const pending = allOrders.filter(o => o.status.startsWith('PENDING') || o.status === 'PARTIALLY_PAID').length;
+      const revenue = allOrders
+        .filter(o => o.status === 'PAID_CONFIRMED' || o.status === 'OVERPAID_CONFIRMED' || o.status === 'PREPARING' || o.status === 'DELIVERED')
+        .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+      document.getElementById('metric-paid').innerText = paid;
+      document.getElementById('metric-review').innerText = review;
+      document.getElementById('metric-pending').innerText = pending;
+      document.getElementById('metric-revenue').innerText = `${revenue} ج.م`;
+    }
+
+    function renderOrders() {
+      const container = document.getElementById('orders-container');
+      
+      const filtered = allOrders.filter(o => {
+        if (currentFilter === 'ALL') return true;
+        if (currentFilter === 'PAID_CONFIRMED') return o.status === 'PAID_CONFIRMED' || o.status === 'OVERPAID_CONFIRMED';
+        return o.status === currentFilter;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-full bg-white rounded-3xl p-12 text-center border border-slate-200 text-slate-400">
+            <div class="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-2 text-slate-400">
+              <i data-lucide="inbox" class="w-6 h-6"></i>
+            </div>
+            <span class="text-sm font-semibold">لا توجد طلبات في هذا القسم حالياً</span>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      container.innerHTML = filtered.map(order => {
+        // Status Badge Style
+        let badge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-600"><i data-lucide="clock" class="w-3 h-3"></i><span>بانتظار الدفع</span></span>';
+        
+        if (order.status === 'PAID_CONFIRMED') {
+          badge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i data-lucide="cpu" class="w-3 h-3 text-emerald-600"></i><span>معتمد بالذكاء الاصطناعي</span></span>';
+        } else if (order.status === 'OVERPAID_CONFIRMED') {
+          badge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200"><i data-lucide="coins" class="w-3 h-3 text-emerald-600"></i><span>معتمد (رد نقدي)</span></span>';
+        } else if (order.status === 'PARTIALLY_PAID') {
+          badge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200"><i data-lucide="pie-chart" class="w-3 h-3 text-amber-600"></i><span>دفع جزئي</span></span>';
+        } else if (order.status === 'ESCALATED_HUMAN') {
+          badge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-200 animate-pulse"><i data-lucide="alert-triangle" class="w-3 h-3 text-rose-600"></i><span>يتطلب فحص يدوي</span></span>';
+        } else if (order.status === 'PREPARING') {
+          badge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-200"><i data-lucide="cooking-pot" class="w-3 h-3 text-amber-600"></i><span>قيد التحضير</span></span>';
+        } else if (order.status === 'DELIVERED') {
+          badge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-indigo-100 text-indigo-800 border border-indigo-200"><i data-lucide="check-circle" class="w-3 h-3 text-indigo-600"></i><span>مكتمل ومسلّم</span></span>';
+        } else if (order.status === 'REJECTED') {
+          badge = '<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-200 text-slate-700"><i data-lucide="x-circle" class="w-3 h-3"></i><span>مرفوض</span></span>';
+        }
+
+        const itemsHtml = (order.items || []).map(i => `
+          <li class="flex justify-between text-xs py-1.5 border-b border-slate-100 last:border-0">
+            <span class="text-slate-700">${i.name} × ${i.quantity}</span>
+            <span class="font-bold text-slate-900 font-mono">${i.price * i.quantity} ج.م</span>
+          </li>
+        `).join('');
+
+        // Overpayment Refund Alert Banner
+        let refundBanner = '';
+        if (order.refundDue > 0) {
+          refundBanner = `
+            <div class="bg-amber-50 p-2.5 rounded-xl border border-amber-200 text-xs text-amber-900 flex items-center justify-between mb-3 font-bold">
+              <span class="flex items-center gap-1.5">
+                <i data-lucide="banknote" class="w-4 h-4 text-amber-600"></i>
+                <span>رد نقدي للعميل:</span>
+              </span>
+              <span class="bg-amber-200 px-2 py-0.5 rounded text-amber-950 font-mono">${order.refundDue} ج.م</span>
+            </div>
+          `;
+        }
+
+        // Partial Payment Banner
+        let partialBanner = '';
+        if (order.status === 'PARTIALLY_PAID') {
+          const remaining = order.totalAmount - (order.amountPaidSoFar || 0);
+          partialBanner = `
+            <div class="bg-amber-50/80 p-2.5 rounded-xl border border-amber-200 text-xs text-amber-950 space-y-1 mb-3">
+              <div class="flex justify-between">
+                <span>المسدد حتى الآن:</span>
+                <b class="font-mono text-emerald-700">${order.amountPaidSoFar} ج.م</b>
+              </div>
+              <div class="flex justify-between font-bold text-rose-700">
+                <span>المتبقي المطلوب:</span>
+                <b class="font-mono">${remaining} ج.م</b>
+              </div>
+            </div>
+          `;
+        }
+
+        // AI Verification Card
+        let aiCard = '';
+        if (order.paymentDetails) {
+          aiCard = `
+            <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 text-[11px] space-y-1 text-slate-800 mb-3">
+              <div class="font-bold text-slate-900 flex items-center justify-between">
+                <span class="flex items-center gap-1">
+                  <i data-lucide="cpu" class="w-3.5 h-3.5 text-indigo-600"></i>
+                  <span>بيانات الفحص</span>
+                </span>
+                <span class="text-[10px] bg-indigo-50 text-indigo-800 px-2 py-0.5 rounded font-bold">${order.paymentDetails.payment_method || 'InstaPay'}</span>
+              </div>
+              <div class="flex justify-between text-slate-600">
+                <span>المبلغ في الإيصال:</span>
+                <b class="font-mono text-slate-900">${order.paymentDetails.amount_paid || 0} ج.م</b>
+              </div>
+              <div class="flex justify-between text-slate-600">
+                <span>رقم العملية:</span>
+                <code class="font-mono text-[10px] bg-white px-1.5 py-0.5 rounded border border-slate-200">${order.paymentDetails.transaction_id || 'N/A'}</code>
+              </div>
+            </div>
+          `;
+        }
+
+        // Action Buttons
+        let actionButtons = '';
+        if (order.status === 'PAID_CONFIRMED' || order.status === 'OVERPAID_CONFIRMED') {
+          actionButtons = `
+            <button onclick="updateOrderStatus('${order.id}', 'PREPARING')" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-1.5">
+              <i data-lucide="cooking-pot" class="w-4 h-4"></i>
+              <span>بدء التحضير بالمطبخ</span>
+            </button>
+          `;
+        } else if (order.status === 'PREPARING') {
+          actionButtons = `
+            <button onclick="updateOrderStatus('${order.id}', 'DELIVERED')" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-1.5">
+              <i data-lucide="package-check" class="w-4 h-4"></i>
+              <span>تم التسليم للعميل / المندوب</span>
+            </button>
+          `;
+        } else if (order.status === 'ESCALATED_HUMAN' || order.status === 'PARTIALLY_PAID') {
+          actionButtons = `
+            <div class="grid grid-cols-2 gap-2">
+              <button onclick="manualDecision('${order.id}', 'APPROVE')" class="py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-sm flex items-center justify-center gap-1">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                <span>اعتماد يدوي</span>
+              </button>
+              <button onclick="manualDecision('${order.id}', 'REJECT')" class="py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold rounded-xl transition flex items-center justify-center gap-1">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                <span>رفض الإيصال</span>
+              </button>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition">
+            <div>
+              <div class="flex items-center justify-between mb-2.5">
+                <span class="font-mono font-bold text-xs text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">#${order.id}</span>
+                ${badge}
+              </div>
+
+              <div class="mb-3 space-y-0.5">
+                <h3 class="font-bold text-sm text-slate-900">${order.customerName}</h3>
+                <span class="text-xs text-slate-500 font-mono flex items-center gap-1">
+                  <i data-lucide="phone" class="w-3 h-3 text-slate-400"></i>
+                  <span>${order.phone}</span>
+                </span>
+                ${order.address ? `
+                  <span class="text-[11px] text-slate-500 flex items-center gap-1 mt-1">
+                    <i data-lucide="map-pin" class="w-3 h-3 text-slate-400"></i>
+                    <span>${order.address}</span>
+                  </span>
+                ` : ''}
+              </div>
+
+              <!-- Items list -->
+              <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 mb-3">
+                <ul class="divide-y divide-slate-100">
+                  ${itemsHtml}
+                </ul>
+                <div class="flex justify-between items-center text-xs font-extrabold text-slate-900 pt-1.5 mt-1 border-t border-slate-200">
+                  <span>الإجمالي:</span>
+                  <span class="text-indigo-600 font-mono">${order.totalAmount} ج.م</span>
+                </div>
+              </div>
+
+              ${refundBanner}
+              ${partialBanner}
+              ${aiCard}
+            </div>
+
+            ${actionButtons ? `<div class="pt-2">${actionButtons}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    async function updateOrderStatus(orderId, status) {
+      try {
+        const res = await fetch('/api/cashier/update-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, status })
+        });
+        const data = await res.json();
+        if (data.success) {
+          fetchOrders();
+        }
+      } catch (e) {
+        alert('تعذر تحديث الحالة: ' + e.message);
+      }
+    }
+
+    async function manualDecision(orderId, decision) {
+      const reason = decision === 'REJECT' ? prompt('يرجى كتابة سبب الرفض للعميل (اختياري):', 'بيانات التحويل غير مطابقة') : '';
+      try {
+        const res = await fetch('/api/cashier/manual-decision', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ orderId, decision, notes: reason })
+        });
+        const data = await res.json();
+        if (data.success) {
+          fetchOrders();
+        }
+      } catch (e) {
+        alert('حدث خطأ: ' + e.message);
+      }
+    }
+
+    fetchOrders();
+    setInterval(fetchOrders, 3000);
+  </script>
+</body>
+</html>

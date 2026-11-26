@@ -1,0 +1,100 @@
+{
+  "orders": {
+    "ORD-282466": {
+      "id": "ORD-282466",
+      "customerName": "تجربة عميل",
+      "phone": "01011112222",
+      "address": "القاهرة - المعادي",
+      "items": [
+        {
+          "name": "قهوة",
+          "quantity": 2,
+          "price": 85
+        }
+      ],
+      "totalAmount": 170,
+      "notes": "",
+      "status": "PENDING_TELEGRAM",
+      "telegramChatId": null,
+      "telegramUsername": null,
+      "paymentDetails": null,
+      "receiptImageUrl": null,
+      "createdAt": "2026-11-15T15:15:13.090Z",
+      "updatedAt": "2026-11-15T15:15:13.091Z"
+    },
+    "ORD-478529": {
+      "id": "ORD-478529",
+      "customerName": "فحص الجودة والتأكيد",
+      "phone": "01099887766",
+      "address": "القاهرة - التجمع الخامس",
+      "items": [
+        {
+          "name": "قهوة فاخرة (سبيشالتي فلات وايت)",
+          "price": 85,
+          "quantity": 2
+        },
+        {
+          "name": "تشيز كيك نيويورك بالتوت البري",
+          "price": 95,
+          "quantity": 1
+        }
+      ],
+      "totalAmount": 265,
+      "amountPaidSoFar": 115,
+      "refundDue": 0,
+      "notes": "يرجى التأكد من السخونة",
+      "status": "PAID_CONFIRMED",
+      "telegramChatId": null,
+      "telegramUsername": null,
+      "paymentDetails": {
+        "is_valid_receipt": true,
+        "payment_method": "InstaPay",
+        "transaction_id": "TXN-DUP-001",
+        "amount_paid": 115,
+        "currency": "EGP",
+        "recipient_account": "store@instapay",
+        "is_today_or_recent": true,
+        "tampering_signs": {
+          "detected": false
+        },
+        "confidence_score": 0.98
+      },
+      "receipts": [
+        {
+          "amount": 150,
+          "receiptData": {
+            "is_valid_receipt": true,
+            "payment_method": "InstaPay",
+            "transaction_id": "TXN-103211",
+            "amount_paid": 150,
+            "currency": "EGP",
+            "recipient_account": "store@instapay",
+            "is_today_or_recent": true,
+            "tampering_signs": {
+              "detected": false
+            },
+            "confidence_score": 0.98
+          },
+          "timestamp": "2026-11-15T22:44:16.718Z"
+        }
+      ],
+      "createdAt": "2026-11-15T22:44:16.691Z",
+      "updatedAt": "2026-11-15T22:44:16.757Z",
+      "paidAt": "2026-11-15T22:44:16.731Z",
+      "manualReview": {
+        "decidedBy": "Cashier",
+        "decision": "APPROVE",
+        "notes": "تمت المراجعة والتأكد من المحفظة يدوياً",
+        "timestamp": "2026-11-15T22:44:16.757Z"
+      }
+    }
+  },
+  "transactions": {
+    "TXN-DUP-001": {
+      "orderId": "ORD-478529",
+      "timestamp": "2026-11-15T22:44:16.730Z",
+      "amount": 115,
+      "method": "InstaPay"
+    }
+  }
+}

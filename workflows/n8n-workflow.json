@@ -1,0 +1,215 @@
+{
+  "name": "AI Order Automation & Receipt Verification Pipeline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-order",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "node-webhook",
+      "name": "1. Webhook - استلام الطلب من المتجر",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Orders",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {}
+      },
+      "id": "node-sheets-append",
+      "name": "2. Google Sheets - تسجيل الطلب جديد",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "responseBody": "={\n  \"success\": true,\n  \"orderId\": \"{{ $json.orderId }}\",\n  \"telegramDeepLink\": \"https://t.me/YourBot?start={{ $json.orderId }}\"\n}"
+      },
+      "id": "node-respond-webhook",
+      "name": "3. Respond Webhook - إعادة رابط التليجرام",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "node-telegram-trigger",
+      "name": "4. Telegram Trigger - استلام الرسائل والصور",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [240, 560]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-photo",
+              "leftValue": "={{ $json.message.photo ? true : false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "node-is-photo",
+      "name": "5. فحص نوع الرسالة: هل هي صورة؟",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 560]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-1.5-flash",
+        "prompt": "=Analyze this Egyptian payment receipt screenshot (InstaPay / Vodafone Cash / Bank). Extract:\n1. is_valid_receipt (boolean)\n2. transaction_id (string)\n3. amount_paid (number)\n4. payment_method (string)\nReturn STRICT JSON.",
+        "options": {}
+      },
+      "id": "node-gemini-vision",
+      "name": "6. Gemini Vision AI - فحص الإيصال والمبلغ",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.6,
+      "position": [720, 500]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "GOOGLE_SHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Cashier_Queue",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Status": "PAID_CONFIRMED",
+            "Payment_Ref": "={{ $json.transaction_id }}"
+          }
+        }
+      },
+      "id": "node-sheets-cashier",
+      "name": "7. Google Sheets - نقل للكاشير والتجهيز",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [960, 500]
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('4. Telegram Trigger - استلام الرسائل والصور').item.json.message.chat.id }}",
+        "text": "=🎉 تم تأكيد الدفع واعتماد طلبك بنجاح!\nطلبك الآن برقم #{{ $json.orderId }} قيد التحضير في المطبخ.",
+        "additionalFields": {}
+      },
+      "id": "node-telegram-confirm",
+      "name": "8. Telegram - إرسال رسالة التأكيد للعميل",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1180, 500]
+    }
+  ],
+  "connections": {
+    "1. Webhook - استلام الطلب من المتجر": {
+      "main": [
+        [
+          {
+            "node": "2. Google Sheets - تسجيل الطلب جديد",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Google Sheets - تسجيل الطلب جديد": {
+      "main": [
+        [
+          {
+            "node": "3. Respond Webhook - إعادة رابط التليجرام",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Telegram Trigger - استلام الرسائل والصور": {
+      "main": [
+        [
+          {
+            "node": "5. فحص نوع الرسالة: هل هي صورة؟",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. فحص نوع الرسالة: هل هي صورة؟": {
+      "main": [
+        [
+          {
+            "node": "6. Gemini Vision AI - فحص الإيصال والمبلغ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Gemini Vision AI - فحص الإيصال والمبلغ": {
+      "main": [
+        [
+          {
+            "node": "7. Google Sheets - نقل للكاشير والتجهيز",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Google Sheets - نقل للكاشير والتجهيز": {
+      "main": [
+        [
+          {
+            "node": "8. Telegram - إرسال رسالة التأكيد للعميل",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
