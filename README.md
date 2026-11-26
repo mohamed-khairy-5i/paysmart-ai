@@ -6,6 +6,17 @@
 
 *English: a small Python project that checks InstaPay / wallet payment receipts. A customer sends a receipt photo to a Telegram bot, Gemini Vision extracts the amount and transaction ID, and the core logic accepts it, flags partial or over-payment, or rejects a reused receipt. A simple page shows order status for the cashier.*
 
+## عرض سريع (Demo)
+
+![عرض تشغيل المشروع](docs/demo.gif)
+
+الصور من تشغيل الكود الحقيقي ببيانات تجريبية (مفيش إيصالات حقيقية):
+
+- نتيجة الاختبارات والديمو: `docs/terminal.png` و `docs/demo-output.txt`
+- شاشة الكاشير بعد معالجة 4 طلبات (مدفوع، مدفوع بزيادة، مراجعة يدوية): `docs/dashboard.png`
+
+الديمو بيستخدم قراءة إيصال تجريبية (`FakeExtractor`)، فمش بيثبت دقة Gemini على إيصالات حقيقية.
+
 ## المشكلة
 
 InstaPay مفيهوش API متاح للمتاجر الصغيرة، فالتاجر بيستلم التحويل على حسابه ويراجع كل سكرين شوت بإيده. ده بياخد وقت وقت الزحمة، وبيفتح باب لتكرار نفس الإيصال على أكتر من طلب.
