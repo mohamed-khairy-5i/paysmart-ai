@@ -1,0 +1,9 @@
+ORD_1001  TX-A1  -> accepted     تم تأكيد الدفع. الطلب راح للمطبخ.
+ORD_1003  TX-A1  -> duplicate    رقم العملية ده اتستخدم قبل كده. الإيصال مرفوض.
+ORD_1002  TX-B1  -> partial      المبلغ أقل من المطلوب. المتبقي 100.00 جنيه.
+ORD_1002  TX-B2  -> accepted     تم تأكيد الدفع. الطلب راح للمطبخ.
+ORD_1003  TX-C1  -> overpaid     تم الدفع، وفي زيادة 30.00 جنيه هتترجع للعميل.
+
+ORD_1001  expected=250.00  paid=250.00  status=paid
+ORD_1002  expected=400.00  paid=400.00  status=paid
+ORD_1003  expected=120.00  paid=150.00  status=overpaid
