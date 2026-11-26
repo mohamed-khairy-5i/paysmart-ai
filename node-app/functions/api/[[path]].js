@@ -1,8 +1,8 @@
 // Cloudflare Pages Function: DEMO-ONLY mock of the Express API (node-app/server.js).
 // No real Gemini or Telegram calls. State lives in memory and resets often.
 const seed = [
-  { id: 'ORD-282466', customerName: 'Demo customer', totalAmount: 170, status: 'PENDING_TELEGRAM', items: [{ name: 'Coffee', quantity: 2, price: 85 }] },
-  { id: 'ORD-478529', customerName: 'Demo review', totalAmount: 265, status: 'ESCALATED_HUMAN', amountPaidSoFar: 115, items: [{ name: 'Cheesecake', quantity: 1, price: 95 }] },
+  { id: 'ORD-282466', customerName: 'Demo customer', phone: '01000000000', totalAmount: 170, status: 'PENDING_TELEGRAM', items: [{ name: 'Coffee', quantity: 2, price: 85 }] },
+  { id: 'ORD-478529', customerName: 'Demo review', phone: '01000000001', totalAmount: 265, status: 'ESCALATED_HUMAN', amountPaidSoFar: 115, items: [{ name: 'Cheesecake', quantity: 1, price: 95 }] },
 ];
 const orders = new Map(seed.map((o) => [o.id, o]));
 const json = (b, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { 'content-type': 'application/json' } });
