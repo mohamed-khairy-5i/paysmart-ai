@@ -4,6 +4,8 @@
 
 مشروع نهائي لبرنامج AICR (Creativa). كتبه محمد خيري.
 
+**عرض مباشر (ديمو واجهات):** https://paysmart-ai.pages.dev (الواجهات حقيقية، لكن الـ API هناك محاكاة، شوف قسم الحالة).
+
 *English: a small Python project that checks InstaPay / wallet payment receipts. A customer sends a receipt photo to a Telegram bot, Gemini Vision extracts the amount and transaction ID, and the core logic accepts it, flags partial or over-payment, or rejects a reused receipt. A simple page shows order status for the cashier.*
 
 ## عرض سريع (Demo)
@@ -53,6 +55,39 @@ python3 -m paysmart.dashboard   # شاشة الكاشير على http://127.0.0.
 ```
 
 الطلبات بتتضاف لقاعدة البيانات من متجرك (`paysmart.db.create_order`). ربط المتجر الإلكتروني نفسه مش جزء من الكود ده.
+
+## هيكل المستودع
+
+| المسار | المحتوى |
+|---|---|
+| `paysmart/`, `tests/` | نسخة Python: منطق المراجعة + قاعدة SQLite + 8 اختبارات |
+| `node-app/` | نسخة Node.js/Express: سيرفر الطلبات، شاشة الكاشير، صفحات الويب الثلاث، خدمات Gemini وتليجرام |
+| `node-app/public/` | الصفحات: المتجر، تأكيد الطلب، شاشة الكاشير (دي اللي منشورة على Cloudflare Pages) |
+| `node-app/functions/` | Cloudflare Pages Function: **محاكاة** للـ API للديمو المستضاف فقط |
+| `workflows/` | ملفا n8n (خط كامل: طلب، Google Sheets، تليجرام، Gemini، قواعد مالية، إشعار الكاشير) |
+| `docs/` | صور تشغيل وديمو (`docs/screens/` لصور نسخة Node و n8n) |
+
+## الحالة بصراحة (إيه اتجرب وإيه لأ)
+
+| الجزء | الحالة |
+|---|---|
+| منطق المراجعة بـ Python + الاختبارات | اتجرب (8 اختبارات) |
+| سيرفر Node.js وصفحاته | اتشغل محليًا على بورت 3000 وجُربت نقاط الـ API ببيانات تجريبية |
+| تليجرام (Node و Python) | مكتوب. في النسخة المحلية اشتغل في **وضع محاكاة** بتوكن وهمي. ماتجرّبش على بوت حقيقي |
+| Gemini Vision | مكتوب. اشتغل في **وضع محاكاة** بمفتاح وهمي. ماتجرّبش على إيصالات حقيقية |
+| n8n | الملف اتفتح في محرر n8n محليًا (لقطة في `docs/screens/n8n_canvas.jpg`). المعرفات placeholders (`GOOGLE_SHEET_ID_HERE`, `YourStoreBot`) ومحتاج ضبط قبل التشغيل |
+| الديمو على Cloudflare Pages | الواجهات حقيقية. الـ API محاكاة في الذاكرة بيرجع نتيجة قبول ثابتة ومش بيحلل صورة الإيصال ولا بيكلم تليجرام |
+
+## تشغيل نسخة Node محليًا
+
+```bash
+cd node-app
+cp .env.example .env     # املا التوكن والمفتاح بتوعك. الملف ده في .gitignore ومش بيترفع
+npm install
+node server.js           # http://localhost:3000  و /cashier.html
+```
+
+الأسرار (توكن البوت، مفتاح Gemini) بتتحط في `.env` بس، ومفيش أي منها في المستودع.
 
 ## حدود لازم تتقال بصراحة
 
